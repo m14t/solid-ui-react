@@ -1,0 +1,165 @@
+/**
+ * Copyright 2020 Inrupt Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+ * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import * as React from "react";
+import { render, waitFor } from "@testing-library/react";
+import * as SolidFns from "@inrupt/solid-client";
+import useDataset from "../../hooks/useDataset";
+import DatasetContext, { DatasetProvider } from ".";
+jest.mock("../../hooks/useDataset");
+let documentBody;
+const mockUrl = "https://some-interesting-value.com";
+const mockThingUrl = "https://some-interesting-value.com#thing";
+const mockPredicate = "http://xmlns.com/foaf/0.1/nick";
+const mockNick = "test nick value";
+let mockDatasetWithResourceInfo = SolidFns.mockSolidDatasetFrom(mockUrl);
+let mockThing = SolidFns.mockThingFrom(mockThingUrl);
+mockThing = SolidFns.addStringNoLocale(mockThing, mockPredicate, mockNick);
+mockDatasetWithResourceInfo = SolidFns.setThing(mockDatasetWithResourceInfo, mockThing);
+function ExampleComponentWithDataset() {
+    const [exampleThing, setExampleThing] = React.useState();
+    const [property, setProperty] = React.useState("fetching in progress");
+    const datasetContext = React.useContext(DatasetContext);
+    const { solidDataset } = datasetContext;
+    React.useEffect(() => {
+        if (solidDataset) {
+            const things = SolidFns.getThingAll(solidDataset);
+            setExampleThing(things[0]);
+        }
+    }, [solidDataset]);
+    React.useEffect(() => {
+        if (exampleThing) {
+            const fetchedProperty = SolidFns.getStringNoLocale(exampleThing, mockPredicate);
+            if (fetchedProperty) {
+                setProperty(fetchedProperty);
+            }
+        }
+    }, [exampleThing]);
+    return (React.createElement("div", null,
+        React.createElement("h2", null, property)));
+}
+function ExampleComponentWithDatasetUrl() {
+    const [exampleThing, setExampleThing] = React.useState();
+    const [property, setProperty] = React.useState();
+    const datasetContext = React.useContext(DatasetContext);
+    const { solidDataset } = datasetContext;
+    React.useEffect(() => {
+        if (solidDataset) {
+            const thing = SolidFns.getThing(solidDataset, mockUrl);
+            setExampleThing(thing);
+        }
+    }, [solidDataset]);
+    React.useEffect(() => {
+        if (exampleThing) {
+            const fetchedProperty = SolidFns.getStringNoLocale(exampleThing, mockPredicate);
+            if (fetchedProperty) {
+                setProperty(fetchedProperty);
+            }
+        }
+    }, [exampleThing]);
+    return (React.createElement("div", null,
+        property && React.createElement("h2", null, property),
+        !property && React.createElement("h2", null, "Failed to fetch property")));
+}
+describe("Testing DatasetContext", () => {
+    it("matches snapshot with Dataset provided", async () => {
+        useDataset.mockReturnValue({
+            solidDataset: undefined,
+            error: undefined,
+        });
+        const { baseElement, getByText } = render(React.createElement(DatasetProvider, { solidDataset: mockDatasetWithResourceInfo },
+            React.createElement(ExampleComponentWithDataset, null)));
+        await waitFor(() => expect(getByText("test nick value")).toBeDefined());
+        expect(baseElement).toMatchSnapshot();
+    });
+    it("matches snapshot when fetching fails", async () => {
+        useDataset.mockReturnValue({
+            solidDataset: undefined,
+            error: "Error",
+        });
+        documentBody = render(React.createElement(DatasetProvider, { datasetUrl: "https://some-broken-resource.com" },
+            React.createElement(ExampleComponentWithDataset, null)));
+        const { baseElement } = documentBody;
+        expect(baseElement).toMatchSnapshot();
+    });
+    it("matches snapshot when fetching", async () => {
+        useDataset.mockReturnValue({
+            solidDataset: undefined,
+            error: undefined,
+        });
+        documentBody = render(React.createElement(DatasetProvider, { datasetUrl: "https://some-broken-resource.com" },
+            React.createElement(ExampleComponentWithDataset, null)));
+        const { baseElement } = documentBody;
+        expect(baseElement).toMatchSnapshot();
+    });
+    it("matches snapshot when fetching and loadingComponent is passed", async () => {
+        useDataset.mockReturnValue({
+            solidDataset: undefined,
+            error: undefined,
+        });
+        documentBody = render(React.createElement(DatasetProvider, { datasetUrl: "https://some-broken-resource.com", loadingComponent: () => React.createElement("span", null, "loading component") },
+            React.createElement(ExampleComponentWithDataset, null)));
+        const { baseElement } = documentBody;
+        expect(baseElement).toMatchSnapshot();
+    });
+    it("matches snapshot when fetching and loading is passed", async () => {
+        useDataset.mockReturnValue({
+            solidDataset: undefined,
+            error: undefined,
+        });
+        documentBody = render(React.createElement(DatasetProvider, { datasetUrl: "https://some-broken-resource.com", loading: React.createElement("span", null, "loading") },
+            React.createElement(ExampleComponentWithDataset, null)));
+        const { baseElement } = documentBody;
+        expect(baseElement).toMatchSnapshot();
+    });
+    it("matches snapshot when loadingComponent is null", async () => {
+        useDataset.mockReturnValue({
+            solidDataset: undefined,
+            error: undefined,
+        });
+        documentBody = render(React.createElement(DatasetProvider, { datasetUrl: "https://some-broken-resource.com", loadingComponent: null },
+            React.createElement(ExampleComponentWithDataset, null)));
+        const { baseElement } = documentBody;
+        expect(baseElement).toMatchSnapshot();
+    });
+});
+describe("Functional testing", () => {
+    it("Should call useDataset", async () => {
+        useDataset.mockReturnValue({
+            solidDataset: mockDatasetWithResourceInfo,
+            error: undefined,
+        });
+        render(React.createElement(DatasetProvider, { datasetUrl: mockUrl },
+            React.createElement(ExampleComponentWithDatasetUrl, null)));
+        expect(useDataset).toHaveBeenCalled();
+    });
+    it("When useDataset return an error, should call onError if passed", async () => {
+        useDataset.mockReturnValue({
+            solidDataset: undefined,
+            error: "Error",
+        });
+        const onError = jest.fn();
+        render(React.createElement(DatasetProvider, { onError: onError, datasetUrl: "https://some-broken-value.com" },
+            React.createElement(ExampleComponentWithDatasetUrl, null)));
+        await waitFor(() => expect(onError).toHaveBeenCalledWith("Error"));
+    });
+});
+//# sourceMappingURL=index.test.js.map
