@@ -119,20 +119,20 @@ export const SessionProvider = ({
       url: window.location.href,
       restorePreviousSession: restoreSession,
     })
-      .then((sessionInfo) =>
-        // If handleIncomingRedirect logged the session in, we know what the current
-        // user's WebID is.
-        sessionInfo?.webId !== undefined
-          ? getProfileAll(sessionInfo?.webId, {
-              fetch: session.fetch,
-            })
-          : undefined
-      )
-      .then((foundProfile) => {
-        if (foundProfile !== undefined) {
-          setProfile(foundProfile);
-        }
-      })
+      // .then((sessionInfo) =>
+      //   // If handleIncomingRedirect logged the session in, we know what the current
+      //   // user's WebID is.
+      //   sessionInfo?.webId !== undefined
+      //     ? getProfileAll(sessionInfo?.webId, {
+      //         fetch: session.fetch,
+      //       })
+      //     : undefined
+      // )
+      // .then((foundProfile) => {
+      //   if (foundProfile !== undefined) {
+      //     setProfile(foundProfile);
+      //   }
+      // })
       .catch((error: Error) => {
         if (onError) {
           onError(error as Error);
